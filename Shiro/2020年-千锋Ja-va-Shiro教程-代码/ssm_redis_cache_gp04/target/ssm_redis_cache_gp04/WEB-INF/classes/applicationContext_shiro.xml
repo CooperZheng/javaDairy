@@ -1,0 +1,70 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                         http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+
+    <bean id="myRealm" class="com.qianfeng.realm.MyRealm">
+        <property name="userService" ref="userServiceImpl"/>
+        <property name="roleService" ref="roleServiceImpl"/>
+        <property name="permissionService" ref="permissionServiceImpl"/>
+        <!-- 密码比对器 -->
+        <property name="credentialsMatcher">
+            <bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+                <property name="hashAlgorithmName" value="SHA-256"/>
+                <!-- true means hex encoded, false means base64 encoded -->
+                <property name="storedCredentialsHexEncoded" value="false"/>
+                <property name="hashIterations" value="10000"/>
+            </bean>
+        </property>
+    </bean>
+
+    <!-- 声明SecurityManager -->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <property name="realm" ref="myRealm"/>
+        <!-- 注册缓存管理器 -->
+        <property name="cacheManager" ref="cacheManager"/>
+        <!-- 注册session管理器 -->
+        <property name="sessionManager" ref="sessionManager"/>
+    </bean>
+
+    <!-- shiroFilter -->
+    <!-- 生产SpringShiroFilter
+         （ 持有shiro的过滤相关规则，可进行请求的过滤校验，校验请求是否合法 ）
+    -->
+    <bean id="shiroFilter04" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <!-- 注入核心对象 -->
+        <property name="securityManager" ref="securityManager"/>
+        <!-- 未登录，没权限时的跳转路径 -->
+        <!--<property name="loginUrl" value="/user/login"/>
+        <property name="unauthorizedUrl" value="/user/perms/error"/>-->
+        <!-- 过滤器链 -->
+        <!--<property name="filterChainDefinitions">
+            <value>
+                /user/all=authc,roles["banzhang"]
+                /user/logout=logout
+                &lt;!&ndash;/user/insert=authc,roles["banfu"]
+                /user/update=authc,perms[""student:update""]
+                /order/insert=authc,roles["xuewei"]
+                &ndash;&gt;
+            </value>
+        </property>-->
+    </bean>
+
+    <!-- CacheManager声明 -->
+    <bean id="cacheManager" class="com.qianfeng.cache.MyShiroCacheManager">
+        <property name="template" ref="redisTemplate"/>
+    </bean>
+
+    <!-- SessionManager,使用Shiro的DefaultWebSessionManager即可，其中注入自定义的SessionDAO -->
+    <bean id="sessionManager" class="org.apache.shiro.web.session.mgt.DefaultWebSessionManager">
+        <!-- 注册SessionDAO,负责将Session对象存入redis -->
+        <property name="sessionDAO">
+            <bean class="com.qianfeng.session.MySessionDAO">
+                <property name="template" ref="redisTemplate2"/>
+            </bean>
+        </property>
+        <property name="globalSessionTimeout" value="1800000"/>
+    </bean>
+</beans>
